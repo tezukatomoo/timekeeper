@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タイムキーパー</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      color: #fff;
+      transition: background 0.8s ease;
+    }
+
+    body.study-mode { background: #1a1a2e; }
+    body.break-mode { background: #0f3460; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      margin-bottom: 0.5rem;
+      opacity: 0.9;
+    }
+
+    .mode-label {
+      font-size: 1rem;
+      letter-spacing: 0.2em;
+      margin-bottom: 1.8rem;
+      padding: 0.3em 1.2em;
+      border-radius: 20px;
+      font-weight: 500;
+      transition: background 0.6s, color 0.6s;
+    }
+
+    body.study-mode .mode-label { background: rgba(229,57,53,0.2); color: #ef9a9a; }
+    body.break-mode .mode-label { background: rgba(38,198,218,0.2); color: #80deea; }
+
+    /* ── 時間設定パネル ── */
+    .time-settings {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.8rem;
+      align-items: center;
+    }
+
+    .time-setting {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .time-setting label {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      opacity: 0.55;
+    }
+
+    .time-setting .input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 0.3em 0.7em;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: border-color 0.2s;
+    }
+
+    .time-setting .input-row:focus-within {
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .time-setting input[type=number] {
+      width: 3.2em;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 300;
+      text-align: center;
+      -moz-appearance: textfield;
+    }
+
+    .time-setting input[type=number]::-webkit-inner-spin-button,
+    .time-setting input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .time-setting .unit {
+      font-size: 0.75rem;
+      opacity: 0.45;
+      letter-spacing: 0.05em;
+    }
+
+    .step-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.4);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 0 0.1em;
+      line-height: 1;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .step-btn:hover { color: rgba(255,255,255,0.85); }
+
+    .settings-divider {
+      width: 1px;
+      height: 40px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* タイマーリング */
+    .timer-ring {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin-bottom: 2rem;
+    }
+
+    .timer-ring svg { transform: rotate(-90deg); }
+
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+
+    .ring-progress {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear, stroke 0.6s;
+    }
+
+    body.study-mode .ring-progress { stroke: #ef5350; }
+    body.break-mode .ring-progress { stroke: #26c6da; }
+
+    .timer-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .timer-digits {
+      font-size: 4rem;
+      font-weight: 200;
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+
+    .timer-seconds-label {
+      font-size: 0.8rem;
+      opacity: 0.5;
+      letter-spacing: 0.15em;
+      margin-top: 0.3rem;
+    }
+
+    .session-info {
+      font-size: 0.85rem;
+      opacity: 0.5;
+      margin-bottom: 2rem;
+      letter-spacing: 0.1em;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    button:active { transform: scale(0.96); }
+
+    .btn-main {
+      padding: 0.8em 2.5em;
+      background: #ef5350;
+      color: #fff;
+      min-width: 120px;
+      transition: background 0.6s;
+    }
+
+    body.break-mode .btn-main { background: #26c6da; }
+    .btn-main:hover { opacity: 0.88; }
+
+    .btn-reset {
+      padding: 0.8em 1.6em;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.75);
+    }
+    .btn-reset:hover { background: rgba(255,255,255,0.18); }
+
+    .btn-skip {
+      padding: 0.8em 1.6em;
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.5);
+    }
+    .btn-skip:hover { background: rgba(255,255,255,0.13); }
+
+    .cycles {
+      margin-top: 2rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .cycle-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      transition: background 0.4s;
+    }
+
+    .cycle-dot.done { background: rgba(255,255,255,0.7); }
+    .cycle-dot.active { background: #ef5350; box-shadow: 0 0 6px #ef5350; }
+    body.break-mode .cycle-dot.active { background: #26c6da; box-shadow: 0 0 6px #26c6da; }
+
+    .finished-msg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+
+    .finished-msg.show { opacity: 1; pointer-events: all; }
+
+    .finished-msg h2 { font-size: 1.8rem; font-weight: 300; letter-spacing: 0.2em; }
+    .finished-msg p  { opacity: 0.7; letter-spacing: 0.1em; }
+
+    .btn-restart {
+      padding: 0.8em 2.5em;
+      background: #ef5350;
+      color: #fff;
+      border-radius: 50px;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+    }
+
+    /* 画面点滅オーバーレイ */
+    .flash-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    @keyframes flash-study {
+      0%,100% { opacity: 0; }
+      20%,60% { opacity: 0.45; }
+      40%,80% { opacity: 0; }
+    }
+
+    @keyframes flash-break {
+      0%,100% { opacity: 0; }
+      20%,60% { opacity: 0.45; }
+      40%,80% { opacity: 0; }
+    }
+
+    .flash-overlay.flashing-study {
+      background: #ef5350;
+      animation: flash-study 0.6s ease 4;
+    }
+
+    .flash-overlay.flashing-break {
+      background: #26c6da;
+      animation: flash-break 0.6s ease 4;
+    }
+  </style>
+</head>
+<body class="study-mode">
+
+  <h1>タイムキーパー</h1>
+  <div class="mode-label" id="modeLabel">勉強中</div>
+
+  <!-- 時間設定 -->
+  <div class="time-settings">
+    <div class="time-setting">
+      <label>勉強時間</label>
+      <div class="input-row">
+        <button class="step-btn" onclick="stepTime('study', -1)">−</button>
+        <input type="number" id="studyInput" value="30" min="1" max="120" onchange="onSettingChange()">
+        <span class="unit">分</span>
+        <button class="step-btn" onclick="stepTime('study', 1)">＋</button>
+      </div>
+    </div>
+    <div class="settings-divider"></div>
+    <div class="time-setting">
+      <label>休憩時間</label>
+      <div class="input-row">
+        <button class="step-btn" onclick="stepTime('break', -1)">−</button>
+        <input type="number" id="breakInput" value="5" min="1" max="60" onchange="onSettingChange()">
+        <span class="unit">分</span>
+        <button class="step-btn" onclick="stepTime('break', 1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-ring">
+    <svg width="280" height="280" viewBox="0 0 280 280">
+      <circle class="ring-bg" cx="140" cy="140" r="125"/>
+      <circle class="ring-progress" id="ringProgress"
+        cx="140" cy="140" r="125"
+        stroke-dasharray="785.4"
+        stroke-dashoffset="0"/>
+    </svg>
+    <div class="timer-text">
+      <div class="timer-digits" id="timerDisplay">30:00</div>
+      <div class="timer-seconds-label">残り時間</div>
+    </div>
+  </div>
+
+  <div class="session-info" id="sessionInfo">セッション 1 / 勉強タイム</div>
+
+  <div class="controls">
+    <button class="btn-main" id="btnMain" onclick="toggleTimer()">スタート</button>
+    <button class="btn-skip" onclick="skipPhase()">スキップ</button>
+    <button class="btn-reset" onclick="resetTimer()">リセット</button>
+  </div>
+
+  <div class="cycles" id="cycles"></div>
+
+  <div class="flash-overlay" id="flashOverlay"></div>
+
+  <div class="finished-msg" id="finishedMsg">
+    <h2>お疲れさまでした！</h2>
+    <p id="finishedDetail">4セッション完了しました</p>
+    <button class="btn-restart" onclick="restartAll()">もう一度</button>
+  </div>
+
+  <script>
+    const TOTAL_SESSIONS = 4;
+    const CIRCUMFERENCE = 2 * Math.PI * 125;
+
+    let currentSession = 1;
+    let isStudyPhase = true;
+    let secondsLeft = 0;
+    let totalSeconds = 0;
+    let running = false;
+    let timerId = null;
+
+    function getStudySec() {
+      const v = parseInt(document.getElementById('studyInput').value) || 30;
+      return Math.max(1, Math.min(120, v)) * 60;
+    }
+    function getBreakSec() {
+      const v = parseInt(document.getElementById('breakInput').value) || 5;
+      return Math.max(1, Math.min(60, v)) * 60;
+    }
+
+    function stepTime(type, delta) {
+      if (running) return;
+      const id = type === 'study' ? 'studyInput' : 'breakInput';
+      const el = document.getElementById(id);
+      const max = type === 'study' ? 120 : 60;
+      el.value = Math.max(1, Math.min(max, parseInt(el.value || 1) + delta));
+      onSettingChange();
+    }
+
+    function onSettingChange() {
+      if (running) return;
+      // 現在のフェーズに合わせてリセット
+      const newSec = isStudyPhase ? getStudySec() : getBreakSec();
+      secondsLeft = newSec;
+      totalSeconds = newSec;
+      updateDisplay();
+    }
+
+    // 音
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq = 880, duration = 0.3, vol = 0.4) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+    function chime() {
+      [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.4, 0.3), i * 180));
+    }
+
+    function updateDisplay() {
+      const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+      const s = String(secondsLeft % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+      const offset = CIRCUMFERENCE * (1 - secondsLeft / totalSeconds);
+      document.getElementById('ringProgress').style.strokeDashoffset = offset;
+      document.title = `${m}:${s} — タイムキーパー`;
+    }
+
+    function updateModeUI() {
+      document.body.className = isStudyPhase ? 'study-mode' : 'break-mode';
+      document.getElementById('modeLabel').textContent = isStudyPhase ? '勉強中' : '休憩中';
+      document.getElementById('sessionInfo').textContent = isStudyPhase
+        ? `セッション ${currentSession} / 勉強タイム`
+        : `セッション ${currentSession} → 休憩タイム`;
+      updateCycles();
+    }
+
+    function updateCycles() {
+      const container = document.getElementById('cycles');
+      container.innerHTML = '';
+      for (let i = 1; i <= TOTAL_SESSIONS; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'cycle-dot';
+        if (i < currentSession) dot.classList.add('done');
+        if (i === currentSession) dot.classList.add('active');
+        container.appendChild(dot);
+      }
+    }
+
+    function toggleTimer() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      running = !running;
+      document.getElementById('btnMain').textContent = running ? '一時停止' : '再開';
+      // 入力欄を無効化/有効化
+      document.getElementById('studyInput').disabled = running;
+      document.getElementById('breakInput').disabled = running;
+      if (running) {
+        timerId = setInterval(tick, 1000);
+      } else {
+        clearInterval(timerId);
+      }
+    }
+
+    function tick() {
+      if (secondsLeft <= 0) { phaseEnd(); return; }
+      secondsLeft--;
+      updateDisplay();
+      if (secondsLeft <= 3 && secondsLeft > 0) beep(660, 0.2, 0.25);
+    }
+
+    function flashScreen(type) {
+      const el = document.getElementById('flashOverlay');
+      el.className = 'flash-overlay'; // reset
+      // force reflow
+      void el.offsetWidth;
+      el.classList.add(type === 'study' ? 'flashing-study' : 'flashing-break');
+      el.addEventListener('animationend', () => { el.className = 'flash-overlay'; }, { once: true });
+    }
+
+    function phaseEnd() {
+      clearInterval(timerId);
+      running = false;
+      document.getElementById('studyInput').disabled = false;
+      document.getElementById('breakInput').disabled = false;
+      // 点滅：勉強終了=赤、休憩終了=青
+      flashScreen(isStudyPhase ? 'study' : 'break');
+      chime();
+
+      if (isStudyPhase) {
+        isStudyPhase = false;
+        secondsLeft = totalSeconds = getBreakSec();
+      } else {
+        if (currentSession >= TOTAL_SESSIONS) {
+          document.getElementById('finishedDetail').textContent =
+            `${TOTAL_SESSIONS}セッション完了しました`;
+          document.getElementById('finishedMsg').classList.add('show');
+          document.title = '完了！ — タイムキーパー';
+          return;
+        }
+        currentSession++;
+        isStudyPhase = true;
+        secondsLeft = totalSeconds = getStudySec();
+      }
+      updateModeUI();
+      updateDisplay();
+      document.getElementById('btnMain').textContent = 'スタート';
+    }
+
+    function skipPhase() {
+      clearInterval(timerId);
+      running = false;
+      document.getElementById('studyInput').disabled = false;
+      document.getElementById('breakInput').disabled = false;
+      secondsLeft = 0;
+      updateDisplay();
+      phaseEnd();
+    }
+
+    function resetTimer() {
+      clearInterval(timerId);
+      running = false;
+      currentSession = 1;
+      isStudyPhase = true;
+      secondsLeft = totalSeconds = getStudySec();
+      document.getElementById('btnMain').textContent = 'スタート';
+      document.getElementById('studyInput').disabled = false;
+      document.getElementById('breakInput').disabled = false;
+      document.getElementById('finishedMsg').classList.remove('show');
+      updateModeUI();
+      updateDisplay();
+      document.title = 'タイムキーパー';
+    }
+
+    function restartAll() {
+      document.getElementById('finishedMsg').classList.remove('show');
+      resetTimer();
+    }
+
+    // 初期化
+    secondsLeft = totalSeconds = getStudySec();
+    updateModeUI();
+    updateDisplay();
+    updateCycles();
+  </script>
+</body>
+</html>
