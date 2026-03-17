@@ -353,7 +353,6 @@
   </div>
 
   <script>
-    const TOTAL_SESSIONS = 4;
     const CIRCUMFERENCE = 2 * Math.PI * 125;
 
     let currentSession = 1;
@@ -429,13 +428,22 @@
     function updateCycles() {
       const container = document.getElementById('cycles');
       container.innerHTML = '';
-      for (let i = 1; i <= TOTAL_SESSIONS; i++) {
+      // 直近4セッション分のドットを表示
+      const DOTS = 4;
+      const start = Math.max(1, currentSession - DOTS + 1);
+      const end = Math.max(start + DOTS - 1, currentSession);
+      for (let i = start; i <= end; i++) {
         const dot = document.createElement('div');
         dot.className = 'cycle-dot';
         if (i < currentSession) dot.classList.add('done');
         if (i === currentSession) dot.classList.add('active');
         container.appendChild(dot);
       }
+      // セッション番号ラベル
+      const label = document.createElement('span');
+      label.style.cssText = 'font-size:0.72rem;opacity:0.4;letter-spacing:0.1em;margin-left:0.5rem';
+      label.textContent = `#${currentSession}`;
+      container.appendChild(label);
     }
 
     function toggleTimer() {
@@ -490,20 +498,17 @@
         document.getElementById('breakInput').disabled = true;
         timerId = setInterval(tick, 1000);
       } else {
-        if (currentSession >= TOTAL_SESSIONS) {
-          document.getElementById('finishedDetail').textContent =
-            `${TOTAL_SESSIONS}セッション完了しました`;
-          document.getElementById('finishedMsg').classList.add('show');
-          document.title = '完了！ — タイムキーパー';
-          return;
-        }
-        // 休憩終了 → 次の勉強セッションはスタートボタン待ち
+        // 休憩終了 → 次の勉強セッションを自動スタート
         currentSession++;
         isStudyPhase = true;
         secondsLeft = totalSeconds = getStudySec();
         updateModeUI();
         updateDisplay();
-        document.getElementById('btnMain').textContent = 'スタート';
+        running = true;
+        document.getElementById('btnMain').textContent = '一時停止';
+        document.getElementById('studyInput').disabled = true;
+        document.getElementById('breakInput').disabled = true;
+        timerId = setInterval(tick, 1000);
       }
     }
 
