@@ -478,8 +478,17 @@
       chime();
 
       if (isStudyPhase) {
+        // 勉強終了 → 休憩へ自動スタート
         isStudyPhase = false;
         secondsLeft = totalSeconds = getBreakSec();
+        updateModeUI();
+        updateDisplay();
+        // 自動で休憩タイマー開始
+        running = true;
+        document.getElementById('btnMain').textContent = '一時停止';
+        document.getElementById('studyInput').disabled = true;
+        document.getElementById('breakInput').disabled = true;
+        timerId = setInterval(tick, 1000);
       } else {
         if (currentSession >= TOTAL_SESSIONS) {
           document.getElementById('finishedDetail').textContent =
@@ -488,13 +497,14 @@
           document.title = '完了！ — タイムキーパー';
           return;
         }
+        // 休憩終了 → 次の勉強セッションはスタートボタン待ち
         currentSession++;
         isStudyPhase = true;
         secondsLeft = totalSeconds = getStudySec();
+        updateModeUI();
+        updateDisplay();
+        document.getElementById('btnMain').textContent = 'スタート';
       }
-      updateModeUI();
-      updateDisplay();
-      document.getElementById('btnMain').textContent = 'スタート';
     }
 
     function skipPhase() {
